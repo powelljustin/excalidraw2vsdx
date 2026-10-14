@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-web/
+*.vsdx
+.DS_Store
+*.log
+tmp/
+agent-tools/
+uploads/

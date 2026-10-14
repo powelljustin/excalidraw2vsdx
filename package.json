@@ -1,0 +1,52 @@
+{
+  "name": "excalidraw2vsdx",
+  "version": "1.0.0",
+  "description": "Convert Excalidraw drawings to native Microsoft Visio .vsdx files",
+  "type": "module",
+  "license": "MIT",
+  "author": "Justin Powell",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/powelljustin/excalidraw2vsdx.git"
+  },
+  "homepage": "https://github.com/powelljustin/excalidraw2vsdx#readme",
+  "bugs": {
+    "url": "https://github.com/powelljustin/excalidraw2vsdx/issues"
+  },
+  "bin": {
+    "excalidraw2vsdx": "./dist/cli/excalidraw2vsdx.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "vite --host 127.0.0.1 --port 47321",
+    "build:web": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 47321",
+    "excalidraw2vsdx": "tsx cli/excalidraw2vsdx.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@xmldom/xmldom": "^0.9.8",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}

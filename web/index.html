@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>excalidraw2vsdx</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <p class="mark">excalidraw2vsdx</p>
+        <h1>Excalidraw drawings, as native Visio files.</h1>
+      </div>
+      <p class="lede">
+        Drop an <code>.excalidraw</code> scene or an <code>.excalidrawlib</code> library.
+        The <code>.vsdx</code> is built in this browser. Nothing is uploaded.
+      </p>
+    </header>
+
+    <main>
+      <section
+        id="drop"
+        class="drop"
+        tabindex="0"
+        role="button"
+        aria-label="Choose an Excalidraw file"
+      >
+        <input id="file" type="file" accept=".excalidraw,.excalidrawlib,.json,application/json" hidden />
+        <p class="drop-title">Drop a drawing here</p>
+        <p class="drop-hint">or click to browse. Libraries become one Visio page per item.</p>
+      </section>
+
+      <section id="result" class="result" hidden>
+        <div class="result-head">
+          <div>
+            <p class="file-name" id="file-name"></p>
+            <p class="file-meta" id="file-meta"></p>
+          </div>
+          <button id="download" type="button">Download .vsdx</button>
+        </div>
+        <div id="pages" class="pages"></div>
+        <ul id="notes" class="notes" hidden></ul>
+      </section>
+
+      <section id="error" class="error" hidden></section>
+    </main>
+
+    <footer>
+      <p>
+        Rectangles, ellipses, diamonds, text, arrows, lines, freedraw, images, and groups.
+        Roughness is dropped. Scale is 96 pixels per inch. Connectors with bindings are glued
+        to connection points.
+      </p>
+    </footer>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
