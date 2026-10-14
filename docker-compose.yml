@@ -5,3 +5,14 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+    environment:
+      DATA_DIR: /data/library
+      # Uncomment and set a long random value before anyone else can reach this
+      # server. Upload, edit, and delete then require the same value in the
+      # Admin token field. Leave it unset for a private single-user install.
+      # ADMIN_TOKEN: change-me
+    volumes:
+      - library-data:/data/library
+
+volumes:
+  library-data:

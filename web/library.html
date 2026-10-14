@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Library · excalidraw2vsdx</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="wide">
+    <header class="top">
+      <p class="mark">excalidraw2vsdx</p>
+      <nav class="nav" aria-label="Sections">
+        <a href="/">Convert</a>
+        <a href="/library.html" aria-current="page">Library</a>
+        <a href="/upload.html">Upload</a>
+      </nav>
+      <h1>Shape library</h1>
+      <p class="lede">
+        Browse shapes that have been uploaded to this server. Each item has a picture,
+        its own <code>.excalidrawlib</code> download, and a one-click Visio conversion.
+      </p>
+    </header>
+
+    <main>
+      <form id="filters" class="filters" role="search">
+        <label>Search
+          <input id="q" type="search" placeholder="Name, description, or tag" autocomplete="off" />
+        </label>
+        <label>Tag
+          <input id="tag" type="search" placeholder="Exact tag" autocomplete="off" />
+        </label>
+        <label>Admin token
+          <input id="token" type="password" autocomplete="off" placeholder="Only if the server asks for one" />
+        </label>
+        <div class="actions">
+          <button type="submit">Search</button>
+          <button id="clear" type="button" class="secondary">Clear</button>
+        </div>
+      </form>
+      <p id="summary" class="hint"></p>
+      <section id="error" class="error" hidden></section>
+      <p id="empty" class="empty" hidden>No libraries yet. <a href="/upload.html">Upload one</a>.</p>
+      <div id="list" class="catalog"></div>
+    </main>
+
+    <footer>
+      <p>
+        Uploaded libraries are stored on this server. The convert page still builds a
+        <code>.vsdx</code> in your browser and does not keep that file.
+      </p>
+    </footer>
+    <script type="module" src="./library.ts"></script>
+  </body>
+</html>

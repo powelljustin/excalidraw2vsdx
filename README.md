@@ -27,6 +27,7 @@ Home network (rectangles, ellipses, a diamond, bound text, glued arrows, a three
 - Groups, rotation, and embedded png, jpeg, gif, and bmp images
 - One Visio page per item in an `.excalidrawlib` library
 - A browser page that converts the file locally, and a Docker image for Apple Silicon and Intel
+- A library on the server: upload an `.excalidrawlib` or `.excalidraw` file, browse items with a PNG preview, download each item, and convert one item to Visio
 
 ## Quick start
 
@@ -47,7 +48,7 @@ docker build -t excalidraw2vsdx .
 docker run --rm -p 8080:8080 excalidraw2vsdx
 ```
 
-Open [http://localhost:8080](http://localhost:8080).
+Open [http://localhost:8080](http://localhost:8080). That command is enough to try the converter. Library uploads need a data folder that survives the container; [docs/DOCKER.md](docs/DOCKER.md) shows the volume and how to back it up.
 
 ## Command line
 
@@ -77,7 +78,7 @@ Inside the Docker image the same tool is the `cli` command. See [docs/DOCKER.md]
 
 ## Web page
 
-The page converts entirely in the browser. Nothing is uploaded.
+The convert page builds the `.vsdx` in the browser. That file is not uploaded.
 
 ```bash
 npm run dev
@@ -85,15 +86,43 @@ npm run dev
 
 Open [http://127.0.0.1:47321](http://127.0.0.1:47321), drop an `.excalidraw` or `.excalidrawlib` file, and download the `.vsdx`.
 
+The same site has a [library](#library-repository) and an upload page. Those talk to the API server. During development, run it in a second terminal:
+
+```bash
+npm run dev:server
+```
+
+Vite proxies `/api` to `http://127.0.0.1:8080`. The Docker image serves the pages and the API together.
+
 To build the static files yourself:
 
 ```bash
 npm run build:web
 ```
 
-Serve the `dist-web/` directory with any static file server. The Docker image does this on port 8080.
+`npm start` (after `npm run build`) serves `dist-web/` and the library API on port 8080.
 
-## Library
+## Library repository
+
+The library stores shapes on the server so other people can browse them. Upload an `.excalidrawlib` (or a single `.excalidraw` drawing). The server splits a library into one record per item, writes a PNG preview of each item, and keeps the files under a data directory.
+
+Open **Library** to search by name or tag, download the whole `.excalidrawlib`, download one item as its own `.excalidrawlib`, or choose **Convert to Visio (.vsdx)** for that item. The picture is a clean drawing of the elements (roughness is dropped, the same way the converter drops it), so you can see the shape without importing it into Excalidraw.
+
+There is no login. Set `ADMIN_TOKEN` to a long random string when anyone else can reach the server. Upload, edit, and delete then require that value in the Admin token field (sent as `X-Admin-Token`). Leave it unset on a private machine and those actions stay open.
+
+Each library and each item has `access`: `free` or `paid`. New uploads are `free`. `paid` is stored for a later payment check. This version does not take payment. A paid library still shows its name, and its previews and downloads stay hidden until an admin token (or a future check) allows them. The check is a small function, `allowPaid`, passed to `createAccessPolicy` in `src/library/access.ts`. A Stripe check can replace that function later without rewriting the routes.
+
+Metadata is a JSON file, `index.json`, inside the data directory. SQLite through `better-sqlite3` was not used: that package is a native addon, and its musl build is not reliable on `node:22-alpine` for both arm64 and amd64. The JSON file is the whole catalog. Copy the data directory and you have a backup. The files for each library live in `libraries/` next to the index. Previews are PNG files made with [resvg-js](https://github.com/yisibl/resvg-js) from an SVG this project draws itself. No browser runs inside the container.
+
+```bash
+DATA_DIR=./data/library ADMIN_TOKEN= npm start
+```
+
+`DATA_DIR` defaults to `./data/library` outside Docker and to `/data/library` in the image. `MAX_UPLOAD_BYTES` defaults to 20 MB. Uploads must be JSON, must look like an Excalidraw scene or library, and the file name must end in `.excalidrawlib`, `.excalidraw`, or `.json`. Names are stored as labels. They are never used as disk paths.
+
+Docker setup, the volume, and backup steps are in [docs/DOCKER.md](docs/DOCKER.md).
+
+## Node.js API
 
 ```ts
 import { readFileSync, writeFileSync } from "node:fs";
@@ -173,6 +202,8 @@ Two drawings live in `test/fixtures/` and are covered by the tests:
 - Frames, embeds, and iframes are rectangles with a label. Linked frames keep the link as a hyperlink.
 - Deleted elements are skipped. Unsupported element types are skipped and reported.
 - There are no layers, and the drawing grid is not copied. The page adds a 0.5 inch margin around the drawing.
+- Library previews are clean shapes. Roughness, hachure, and cross-hatch are not drawn. Text uses DejaVu Sans inside the Docker image.
+- The library has no accounts and no payments. `paid` only hides files until a check is added. Without `ADMIN_TOKEN`, anyone who can reach the server can upload and delete.
 
 ## Development
 
@@ -186,21 +217,23 @@ npm run dev
 
 `npm test` runs the unit and integration tests. When LibreOffice (`soffice`) and `pdftoppm` are installed, it also renders both sample drawings to PNG under `tmp/render/`. That step is skipped when LibreOffice is not installed, which is the case on the GitHub runner.
 
-Unit tests cover color, corner radius, coordinate conversion, rotation, text, glue, groups, freedraw, images, and libraries. Integration tests convert `test/fixtures/pi-audio-chain.excalidraw` and `test/fixtures/home-network.excalidraw` and check the package parts and page XML.
+Unit tests cover color, corner radius, coordinate conversion, rotation, text, glue, groups, freedraw, images, and libraries. Integration tests convert `test/fixtures/pi-audio-chain.excalidraw` and `test/fixtures/home-network.excalidraw` and check the package parts and page XML. Library tests cover upload parsing, splitting a library into items, PNG previews, and the HTTP API (search, download, Visio conversion, size limits, and the admin token).
 
 ## Project structure
 
 ```
 cli/                 Command-line entry
 src/                 Converter, geometry, colors, and the Visio package writer
-web/                 Browser page (Vite). Conversion stays in the browser.
-docker/              Container entrypoint and the small static file server
-test/fixtures/       Sample drawings
+src/library/         Upload parsing, JSON catalog, previews, and the access check
+src/server/          HTTP API and static file server
+web/                 Browser pages (Vite): convert, library, and upload
+docker/              Container entrypoint. serve.mjs starts the compiled server
+test/fixtures/       Sample drawings and a sample library
 test/                Vitest tests
-docs/DOCKER.md       Docker install and run guide
+docs/DOCKER.md       Docker install, the library volume, and backup
 docs/images/         Before/after preview images
 Dockerfile           Multi-stage image (Node build, then Node 22 Alpine on port 8080)
-docker-compose.yml   Publishes 8080 and restarts unless stopped
+docker-compose.yml   Publishes 8080, keeps the library volume, restarts unless stopped
 ```
 
 ## Contributing

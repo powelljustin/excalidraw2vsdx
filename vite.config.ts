@@ -7,14 +7,27 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 47321,
     strictPort: true,
+    proxy: {
+      "/api": "http://127.0.0.1:8080",
+    },
   },
   preview: {
     host: "127.0.0.1",
     port: 47321,
     strictPort: true,
+    proxy: {
+      "/api": "http://127.0.0.1:8080",
+    },
   },
   build: {
     outDir: resolve(__dirname, "dist-web"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, "web/index.html"),
+        library: resolve(__dirname, "web/library.html"),
+        upload: resolve(__dirname, "web/upload.html"),
+      },
+    },
   },
 });
