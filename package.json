@@ -1,6 +1,6 @@
 {
   "name": "excalidraw2vsdx",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Convert Excalidraw drawings to native Microsoft Visio .vsdx files",
   "type": "module",
   "license": "MIT",
@@ -33,17 +33,22 @@
     "dev": "vite --host 127.0.0.1 --port 47321",
     "build:web": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 47321",
+    "start": "node dist/src/server/main.js",
+    "dev:server": "tsx src/server/main.ts",
     "excalidraw2vsdx": "tsx cli/excalidraw2vsdx.ts"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "fflate": "^0.8.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/pngjs": "^6.0.5",
     "@xmldom/xmldom": "^0.9.8",
+    "pngjs": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",

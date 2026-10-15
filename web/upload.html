@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Upload · excalidraw2vsdx</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="wide">
+    <header class="top">
+      <p class="mark">excalidraw2vsdx</p>
+      <nav class="nav" aria-label="Sections">
+        <a href="/">Convert</a>
+        <a href="/library.html">Library</a>
+        <a href="/upload.html" aria-current="page">Upload</a>
+      </nav>
+      <h1>Upload a library</h1>
+      <p class="lede">
+        Add an <code>.excalidrawlib</code> or <code>.excalidraw</code> file. The server
+        stores it, splits a library into separate items, and draws a PNG preview of each one.
+      </p>
+    </header>
+
+    <main>
+      <form id="upload" class="stack">
+        <label>File
+          <input id="file" type="file" accept=".excalidraw,.excalidrawlib,.json,application/json" required />
+        </label>
+        <label>Name
+          <input id="name" type="text" maxlength="120" placeholder="Network shapes" />
+        </label>
+        <label>Description
+          <textarea id="description" rows="3" maxlength="2000" placeholder="What this set is for"></textarea>
+        </label>
+        <label>Tags
+          <input id="tags" type="text" placeholder="network, demo" />
+          <span class="hint">Comma-separated. Copied onto each item so search can find them.</span>
+        </label>
+        <label>Access
+          <select id="access">
+            <option value="free" selected>Free</option>
+            <option value="paid">Paid</option>
+          </select>
+          <span class="hint">Leave this on Free. Paid is saved for a future payment check and is hidden from the public library until that check exists. There is no checkout in this version.</span>
+        </label>
+        <label>Admin token
+          <input id="token" type="password" autocomplete="off" placeholder="Only if the server asks for one" />
+          <span class="hint">Leave this blank when the server has no <code>ADMIN_TOKEN</code>. The token stays in this browser tab.</span>
+        </label>
+        <button id="submit" class="primary" type="submit">Upload</button>
+      </form>
+
+      <section id="error" class="error" hidden></section>
+      <section id="result" class="catalog" hidden></section>
+    </main>
+
+    <footer>
+      <p>Files are written under the server’s data directory. See the Docker guide for the volume and how to back it up.</p>
+    </footer>
+    <script type="module" src="./upload.ts"></script>
+  </body>
+</html>

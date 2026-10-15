@@ -2,7 +2,7 @@
 
 Docker runs this project in a small Linux environment so you do not have to install Node.js. The same steps work on a Mac with Apple Silicon, a Mac with an Intel chip, Windows, and Linux. The image is built for both `linux/arm64` and `linux/amd64`. On your own computer, `docker build` picks the one that matches your chip.
 
-The container does two jobs. With no extra arguments it serves the web page on port 8080. The page still converts the drawing in your browser; the container only hands out the files. If the first argument is `cli`, it runs the command-line converter instead.
+The container does two jobs. With no extra arguments it serves the web site on port 8080. The convert page still builds the Visio file in your browser. The library page stores uploaded shapes on disk inside the container, draws a PNG preview of each one, and can convert a single library item to Visio. If the first argument is `cli`, it runs the command-line converter instead.
 
 ## What Docker is
 
@@ -86,7 +86,9 @@ On Apple Silicon this image is `linux/arm64`. On an Intel Mac or a typical Windo
 docker run --rm -p 8080:8080 excalidraw2vsdx
 ```
 
-Leave that terminal open. In a browser, go to [http://localhost:8080](http://localhost:8080). Drop an `.excalidraw` or `.excalidrawlib` file on the page and download the `.vsdx`. The file never leaves your browser.
+Leave that terminal open. In a browser, go to [http://localhost:8080](http://localhost:8080). Drop an `.excalidraw` or `.excalidrawlib` file on the convert page and download the `.vsdx`. That conversion stays in your browser.
+
+**Library** and **Upload** are the other two pages. An upload is saved on the server. The command above uses `--rm`, which throws the container away when you stop it, and the library files go with it. Use a volume, below, if you want the library to still be there tomorrow.
 
 What the flags mean:
 
@@ -96,6 +98,95 @@ What the flags mean:
 - `excalidraw2vsdx` is the image name from the build step.
 
 Press `Ctrl+C` in the terminal to stop the page.
+
+## Keep uploaded libraries
+
+The image stores the catalog at `/data/library` inside the container. That path is controlled by the `DATA_DIR` environment variable, which the image already sets to `/data/library`. A Docker volume is a place Docker keeps for you, separate from the container. When you attach one to `/data/library`, uploads, PNG previews, and the catalog file `index.json` stay on your computer after the container stops.
+
+Give the volume a name you can recognize, `excalidraw2vsdx-library`:
+
+```bash
+docker run --rm -p 8080:8080 -v excalidraw2vsdx-library:/data/library excalidraw2vsdx
+```
+
+`-v excalidraw2vsdx-library:/data/library` means “keep a volume called `excalidraw2vsdx-library`, and show it to the container as `/data/library`.” `--rm` still deletes the container. It does not delete a named volume. The next `docker run` with the same `-v` name sees the same libraries.
+
+You can also use a normal folder, which is easier to find in Finder or File Explorer. From the project folder:
+
+macOS, Linux, and PowerShell:
+
+```bash
+mkdir -p library-data
+docker run --rm -p 8080:8080 -v "$PWD/library-data":/data/library excalidraw2vsdx
+```
+
+Windows Command Prompt:
+
+```cmd
+mkdir library-data
+docker run --rm -p 8080:8080 -v "%cd%\library-data":/data/library excalidraw2vsdx
+```
+
+The folder `library-data` now contains `index.json` and a `libraries` directory. Do not rename files inside it while the container is running.
+
+### Who can upload
+
+There is no login. On a computer that only you can reach, that is fine. If other people can open the site, set an admin token so only you can upload, edit, or delete:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e ADMIN_TOKEN=replace-this-with-a-long-random-string \
+  -v excalidraw2vsdx-library:/data/library \
+  excalidraw2vsdx
+```
+
+Pick your own long random string. Do not commit it, and do not put a real one in `docker-compose.yml` if that file is in git. Type the same string into the **Admin token** field on the Upload and Library pages. Leave `ADMIN_TOKEN` unset and those actions stay open.
+
+`MAX_UPLOAD_BYTES` limits how big an upload can be. The default is 20971520 (20 MB).
+
+Libraries are `free` unless you choose `paid` on the upload form. Paid means the name can be listed, and the pictures and downloads stay hidden. This version does not collect payment. Use Free unless you are trying that flag.
+
+### Back up the data folder
+
+The thing you want a copy of is the whole data directory: `index.json` plus the `libraries` folder. Stop the container first so nothing is writing the catalog while you copy it. `Ctrl+C` stops a foreground container. `docker compose stop` stops the Compose one.
+
+If you used a folder (`library-data` next to the project), zip that folder.
+
+macOS, Linux, and PowerShell:
+
+```bash
+tar czf library-backup.tar.gz -C library-data .
+```
+
+Windows Command Prompt can copy the folder instead:
+
+```cmd
+xcopy library-data library-backup\ /E /I
+```
+
+That archive is the backup. Copy it somewhere else (another disk, or a cloud drive). To put it back, stop the container, empty `library-data`, and extract the archive into it:
+
+```bash
+tar xzf library-backup.tar.gz -C library-data
+```
+
+Then start the container again with the same volume mount.
+
+If you used the named volume `excalidraw2vsdx-library`, Docker is holding the files. This copies them into `library-backup.tar.gz` in the current folder:
+
+```bash
+docker run --rm -v excalidraw2vsdx-library:/data -v "$PWD":/backup alpine tar czf /backup/library-backup.tar.gz -C /data .
+```
+
+Restore that named volume (this replaces what is in the volume):
+
+```bash
+docker run --rm -v excalidraw2vsdx-library:/data -v "$PWD":/backup alpine sh -c "find /data -mindepth 1 -delete && tar xzf /backup/library-backup.tar.gz -C /data"
+```
+
+Compose creates its own volume name, usually `excalidraw2vsdx_library-data`. Run `docker volume ls` and use the name you see in place of `excalidraw2vsdx-library` in the commands above.
+
+`docker compose down -v` deletes that volume and the libraries in it. `docker compose down` without `-v` does not.
 
 ## Convert a file with the CLI
 
@@ -145,7 +236,7 @@ docker run --rm excalidraw2vsdx cli --help
 
 ## Docker Compose
 
-Compose is a small config file, `docker-compose.yml`, that remembers the image name, the port, and the restart rule. From the project folder:
+Compose is a small config file, `docker-compose.yml`, that remembers the image name, the port, the library volume, and the restart rule. The volume is named `library-data` in the file. Compose adds the project name in front, so `docker volume ls` shows something like `excalidraw2vsdx_library-data`. That volume is mounted at `/data/library` inside the container. From the project folder:
 
 ```bash
 docker compose up --build
@@ -168,11 +259,13 @@ docker compose stop
 docker compose start
 ```
 
-Stop it and remove the container (the image remains, so the next start is quick):
+Stop it and remove the container (the image remains, so the next start is quick). The library volume is kept:
 
 ```bash
 docker compose down
 ```
+
+`docker compose down -v` also deletes the library volume. Do not add `-v` unless you mean to throw the uploaded libraries away. Back them up first if you are not sure.
 
 Remove the container and the image built by this compose file:
 
@@ -185,7 +278,7 @@ docker compose down --rmi local
 This is the same idea as `docker compose up -d`, written out as one `docker run`:
 
 ```bash
-docker run -d --name excalidraw2vsdx --restart unless-stopped -p 8080:8080 excalidraw2vsdx
+docker run -d --name excalidraw2vsdx --restart unless-stopped -p 8080:8080 -v excalidraw2vsdx-library:/data/library excalidraw2vsdx
 ```
 
 - `-d` runs in the background.
@@ -274,6 +367,8 @@ On Linux, `permission denied` while talking to `/var/run/docker.sock` means your
 
 If the CLI says it cannot write `out.vsdx`, you are probably not mounting the folder you think you are. `cd` to the folder that contains the drawing, and keep both the input and the `-o` path under `/data`. On Linux, a file created by the container may be owned by root. You can still open it. To take ownership: `sudo chown "$USER" out.vsdx`.
 
+The same applies to a `library-data` folder used as the library volume. If an upload fails and the container log says it cannot write the directory, the folder may be owned by another user. `sudo chown -R "$USER" library-data` from the project folder fixes a folder you created yourself. A named volume (`excalidraw2vsdx-library`) does not have this problem.
+
 ### Apple Silicon
 
 A normal `docker build` on Apple Silicon produces an arm64 image and runs it natively. Leave out `--platform`.
@@ -285,6 +380,10 @@ docker buildx build --platform linux/amd64 -t excalidraw2vsdx --load .
 ```
 
 If a container exits immediately and `docker logs` mentions `exec format error`, the image was built for the other chip. Rebuild with `docker build -t excalidraw2vsdx .` and do not pass `--platform`.
+
+### Upload says it requires an admin token
+
+The server was started with `ADMIN_TOKEN` set. Type that same value into the Admin token field and submit again. If you do not know the value, it is only in the command or the Compose environment you used to start the container. It is not stored in the library.
 
 ### The page does not load
 
